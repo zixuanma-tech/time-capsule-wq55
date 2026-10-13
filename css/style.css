@@ -319,19 +319,13 @@ a{ color:var(--primary-2); text-decoration:none; }
   border:1px solid var(--line); box-shadow:var(--shadow-sm);
 }
 .bub{
-  position:absolute; max-width:230px; padding:12px 18px;
+  position:absolute; left:0; top:0; max-width:230px; padding:12px 18px;
   border-radius:22px; font-size:13.5px; line-height:1.55;
   cursor:pointer; user-select:none; white-space:pre-wrap; word-break:break-all;
   box-shadow:0 6px 18px rgba(193,141,90,.16);
-  animation:drift ease-in-out infinite alternate;
-  transition:transform .2s;
+  will-change:transform;   /* 位置由 js 流动引擎每帧设置 */
 }
-.bub:hover{ transform:scale(1.06); z-index:5; }
 .bub .who{ display:block; margin-top:6px; font-size:11px; opacity:.65; font-weight:600; }
-@keyframes drift{
-  from{ transform:translate(0,0) rotate(-2deg); }
-  to  { transform:translate(14px,-22px) rotate(2.5deg); }
-}
 .msg-list{ margin-top:20px; }
 .msg-item{
   display:flex; gap:12px; padding:16px 4px; border-bottom:1px dashed var(--line);

@@ -94,41 +94,97 @@ document.getElementById('msgSend').onclick = () => {
   toast(anon ? '匿名气泡飘出去了 🕵️' : '气泡发射成功！🫧');
 };
 
-/* ---- 漂浮气泡 ---- */
+/* ---- 流动气泡引擎：缓缓上浮 + 蛇形漂移 + 穿边循环 ---- */
+let bubAnim = null;   // rAF 句柄
+let bubData = [];     // 每个气泡的运动状态
+
+function stopBubLoop(){ if (bubAnim) cancelAnimationFrame(bubAnim); bubAnim = null; }
+function startBubLoop(){
+  if (bubAnim || !bubData.length || document.hidden) return;  // 后台标签页不启动，回前台再续
+  const pool = document.getElementById('bubblePool');
+  let last = performance.now();
+  const step = t => {
+    const dt = Math.min(60, t - last) / 1000; last = t;
+    const W = pool.clientWidth, H = pool.clientHeight;
+    for (const b of bubData) {
+      const slow = b.hover ? .25 : 1;                    // 悬停时减速，方便点开阅读
+      b.phase += b.swaySpeed * dt * slow;
+      b.x += (b.vx + Math.cos(b.phase) * b.sway) * dt * slow;
+      b.y += b.vy * dt * slow;
+      b.rot += b.vr * dt * slow;
+      if (b.rot > 6 || b.rot < -6) b.vr *= -1;
+      b.scale += ((b.hover ? 1.09 : 1) - b.scale) * .12;
+      const w = b.el.offsetWidth, h = b.el.offsetHeight;
+      if (b.x < -w - 30) b.x = W + 20; else if (b.x > W + 30) b.x = -w - 20;
+      if (b.y < -h - 30) b.y = H + 20; else if (b.y > H + 40) b.y = -h - 20;
+      b.el.style.transform = `translate(${b.x.toFixed(1)}px,${b.y.toFixed(1)}px) rotate(${b.rot.toFixed(2)}deg) scale(${b.scale.toFixed(3)})`;
+    }
+    bubAnim = requestAnimationFrame(step);
+  };
+  bubAnim = requestAnimationFrame(step);
+}
+
+function openMsgModal(id){
+  const m = WQ.get('messages', []).find(x => x.id === id);
+  if (!m) return;
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask show';
+  mask.innerHTML = `<div class="modal">
+    <div style="font-size:15.5px;line-height:1.9;padding:6px 2px;white-space:pre-wrap;word-break:break-all">${WQ.esc(m.text)}</div>
+    <div class="small muted" style="text-align:right;margin-top:10px">${m.anon ? '🕵️ 匿名同学' : WQ.esc(m.by)} · ${WQ.fmt(m.ts)}</div>
+    <div class="m-actions"><button class="btn ghost" id="bubClose">关掉</button></div>
+  </div>`;
+  document.body.appendChild(mask);
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  mask.querySelector('#bubClose').onclick = () => mask.remove();
+}
+
 function renderBubbles(){
   const pool = document.getElementById('bubblePool');
-  const msgs = WQ.get('messages', []).slice().sort((a,b) => b.ts - a.ts).slice(0, 14);
+  const msgs = WQ.get('messages', []).slice().sort((a,b) => b.ts - a.ts).slice(0, 12);
+  stopBubLoop();
+  pool.innerHTML = '';
+  bubData = [];
   const W = pool.clientWidth || 1000, H = pool.clientHeight || 420;
-  // 划分成网格槽位再打乱，避免气泡全挤在一起
-  const cols = Math.max(3, Math.floor(W / 260)), rows = 3;
+  // 初始用网格槽位散开（避免刚加载就叠在一起），随后自由流动
+  const cols = Math.max(3, Math.floor(W / 240)), rows = 3;
   const slots = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) slots.push([r, c]);
   slots.sort(() => Math.random() - .5);
-  pool.innerHTML = msgs.map((m, i) => {
-    const [r, c] = slots[i % slots.length];
-    const left = (c + .06 + Math.random() * .5) / cols;
-    const top = (r + .12 + Math.random() * .5) / rows;
-    const dur = 3.5 + Math.random() * 3;
+  msgs.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'bub';
+    el.style.cssText = WQ.pastelOf(m.id + m.by);
     const short = m.text.length > 42 ? m.text.slice(0, 40) + '…' : m.text;
-    return `<div class="bub" style="${WQ.pastelOf(m.id + m.by)};left:${Math.min(left * 100, 88)}%;top:${Math.min(top * 100, 80)}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s" data-id="${m.id}">
-      ${WQ.esc(short)}<span class="who">${m.anon ? '🕵️ 匿名' : WQ.esc(m.by)}</span>
-    </div>`;
-  }).join('');
-  pool.querySelectorAll('.bub').forEach(b => b.onclick = () => {
-    const m = WQ.get('messages', []).find(x => x.id === b.dataset.id);
-    if (!m) return;
-    const mask = document.createElement('div');
-    mask.className = 'modal-mask show';
-    mask.innerHTML = `<div class="modal">
-      <div style="font-size:15.5px;line-height:1.9;padding:6px 2px;white-space:pre-wrap;word-break:break-all">${WQ.esc(m.text)}</div>
-      <div class="small muted" style="text-align:right;margin-top:10px">${m.anon ? '🕵️ 匿名同学' : WQ.esc(m.by)} · ${WQ.fmt(m.ts)}</div>
-      <div class="m-actions"><button class="btn ghost" id="bubClose">关掉</button></div>
-    </div>`;
-    document.body.appendChild(mask);
-    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
-    mask.querySelector('#bubClose').onclick = () => mask.remove();
+    el.innerHTML = `${WQ.esc(short)}<span class="who">${m.anon ? '🕵️ 匿名' : WQ.esc(m.by)}</span>`;
+    el.style.zIndex = 2 + (i % 3);
+    pool.appendChild(el);
+    const [sr, sc] = slots[i % slots.length];
+    const b = {
+      el, hover: false, scale: 1,
+      x: i === 0 ? W / 2 - 90 : (sc + .1 + Math.random() * .4) / cols * W,   // 最新一条从底部升起
+      y: i === 0 ? H + 14    : (sr + .15 + Math.random() * .4) / rows * H,
+      vx: (15 + Math.random() * 18) * (Math.random() < .5 ? -1 : 1),
+      vy: -(8 + Math.random() * 8),
+      sway: 18 + Math.random() * 20, swaySpeed: .5 + Math.random() * .6,
+      phase: Math.random() * Math.PI * 2,
+      rot: (Math.random() - .5) * 5, vr: (Math.random() - .5) * 1.2,
+    };
+    el.addEventListener('mouseenter', () => b.hover = true);
+    el.addEventListener('mouseleave', () => b.hover = false);
+    el.addEventListener('click', () => openMsgModal(m.id));
+    // 立即落位（即使页面在后台、动画未启动，气泡也是散开状态而非堆在角落）
+    el.style.transform = `translate(${b.x.toFixed(1)}px,${b.y.toFixed(1)}px) rotate(${b.rot.toFixed(2)}deg)`;
+    bubData.push(b);
   });
+  startBubLoop();
 }
+
+/* 页面切到后台时暂停流动，回来继续（省电） */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopBubLoop();
+  else startBubLoop();
+});
 
 /* ---- 列表 ---- */
 function renderList(){
