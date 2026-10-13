@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>组队邀请板 · 无穹55小窝 🧩</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="teams">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
+      <h1>🧩 比赛组队邀请板</h1>
+      <div class="sub">缺队友？发个招募；想参赛？来捡个队伍。目标：无穹55没人单打独斗。</div>
+    </div>
+    <button class="btn" id="newTeam">➕ 发布招募</button>
+  </div>
+
+  <div class="filters" id="typeFilter"></div>
+  <div class="team-grid" id="teamGrid"></div>
+  <div class="empty" id="teamEmpty" style="display:none"><span class="e-ico">🧩</span>这个分类下还没有招募，发一个！</div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 组队板逻辑 ---------- */
+const TYPES = ['全部', '竞赛', '大创', '文体', '项目'];
+const TYPE_CLS = { '竞赛':'t1', '大创':'t5', '文体':'t3', '项目':'t2' };
+let curType = '全部';
+
+function renderFilter(){
+  const teams = WQ.get('teams', []);
+  document.getElementById('typeFilter').innerHTML = TYPES.map(tp => {
+    const n = tp === '全部' ? teams.length : teams.filter(x => x.type === tp).length;
+    return `<span class="chip ${tp===curType?'on':''}" data-t="${tp}">${tp} ${n}</span>`;
+  }).join('');
+  document.querySelectorAll('#typeFilter .chip').forEach(c =>
+    c.onclick = () => { curType = c.dataset.t; renderFilter(); renderGrid(); });
+}
+
+function renderGrid(){
+  let teams = WQ.get('teams', []).slice()
+    .sort((a,b) => (a.members.length/a.need - b.members.length/b.need) || new Date(a.deadline) - new Date(b.deadline));
+  if (curType !== '全部') teams = teams.filter(x => x.type === curType);
+  document.getElementById('teamEmpty').style.display = teams.length ? 'none' : 'block';
+  document.getElementById('teamGrid').innerHTML = teams.map(t => {
+    const n = t.members.length, full = n >= t.need;
+    const days = WQ.daysToDate(t.deadline);
+    const dd = days > 0 ? `截止前 ${days} 天` : (days === 0 ? '今天截止！' : '已截止');
+    return `
+    <div class="card team-card ${full?'full':''}">
+      <div class="tc-head">
+        <span class="tag ${TYPE_CLS[t.type]||'t2'}">${WQ.esc(t.type)}</span>
+        <h3>${WQ.esc(t.title)}</h3>
+        <button class="act" data-del="${t.id}" title="删除">🗑️</button>
+      </div>
+      <div class="tc-desc">${WQ.esc(t.desc)}</div>
+      <div class="tc-meta">
+        <span class="${days <= 7 && !full ? 'urgent' : ''}">⏳ ${dd}</span>
+        <span>📮 ${WQ.esc(t.contact)}</span>
+      </div>
+      <div class="tc-bar"><i style="width:${Math.min(100, n / t.need * 100)}%"></i></div>
+      <div class="tc-members">👥 ${n}/${t.need} 人：${t.members.map(m => WQ.esc(m)).join('、')}${full ? ' —— 满员啦 🎉' : ''}</div>
+      <div class="tc-actions">
+        ${full || days < 0 ? '' : `<button class="btn teal sm" data-join="${t.id}">🙋 我要加入</button>`}
+        ${full ? `<button class="btn yellow sm" data-cheer="${t.id}">🎊 恭喜满员</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('[data-join]').forEach(b => b.onclick = () => {
+    const me = ensureMe(); if (!me) return;
+    const teams = WQ.get('teams', []);
+    const t = teams.find(x => x.id === b.dataset.join);
+    if (t.members.some(m => m.startsWith(me.name + '·') || m === me.name)) { toast('你已经在这个队里啦～'); return; }
+    const role = prompt(`加入「${t.title}」\n你在队里担任什么？（如：建模手 / 主唱 / 打杂的，可留空）`, '') ?? '';
+    t.members.push(me.name + (role.trim() ? '·' + role.trim() : ''));
+    WQ.set('teams', teams);
+    renderFilter(); renderGrid();
+    emojiBurst(['💪', '🧩', '🎉']);
+    toast(t.members.length >= t.need ? '恭喜满员！🎉' : '加入成功，一起加油！💪');
+  });
+  document.querySelectorAll('[data-cheer]').forEach(b => b.onclick = () => { confetti(80); emojiBurst(['🎊', '🎉', '🧩']); });
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('删掉这条招募？')) return;
+    WQ.set('teams', WQ.get('teams', []).filter(x => x.id !== b.dataset.del));
+    renderFilter(); renderGrid(); toast('已删除 🗑️');
+  });
+}
+
+/* 发布招募 */
+document.getElementById('newTeam').onclick = () => {
+  const me = ensureMe(); if (!me) return;
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask show';
+  mask.innerHTML = `
+  <div class="modal">
+    <h3>🧩 发布一条组队招募</h3>
+    <div class="field"><label>比赛 / 活动名称</label>
+      <input class="input" id="ntTitle" maxlength="40" placeholder="如：美国大学生数学建模竞赛（MCM）"></div>
+    <div class="field"><label>类型</label>
+      <select class="select" id="ntType"><option>竞赛</option><option>大创</option><option>文体</option><option>项目</option></select></div>
+    <div class="field"><label>说点什么（已有成员、目标、要求…）</label>
+      <textarea class="textarea" id="ntDesc" maxlength="300" placeholder="我负责编程，需要一个建模手 + 一个论文手，目标M奖！"></textarea></div>
+    <div style="display:flex;gap:12px">
+      <div class="field" style="flex:1"><label>队伍总人数（含你）</label>
+        <input class="input" id="ntNeed" type="number" min="2" max="20" value="3"></div>
+      <div class="field" style="flex:1"><label>报名截止</label>
+        <input class="input" id="ntDl" type="date"></div>
+    </div>
+    <div class="field"><label>联系方式</label>
+      <input class="input" id="ntContact" maxlength="40" placeholder="如：班群私信我 / QQ 123456"></div>
+    <div class="m-actions">
+      <button class="btn ghost" id="ntCancel">取消</button>
+      <button class="btn">发布招募 🚀</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  const dt = new Date(Date.now() + 14 * 864e5);
+  mask.querySelector('#ntDl').value = dt.toISOString().slice(0, 10);
+  mask.querySelector('#ntCancel').onclick = () => mask.remove();
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  mask.querySelector('.m-actions .btn').onclick = () => {
+    const title = mask.querySelector('#ntTitle').value.trim();
+    const desc = mask.querySelector('#ntDesc').value.trim();
+    const need = +mask.querySelector('#ntNeed').value || 3;
+    const deadline = mask.querySelector('#ntDl').value;
+    const contact = mask.querySelector('#ntContact').value.trim() || '班群联系';
+    if (!title || !desc || !deadline) { toast('名称、说明、截止日期都要填哦'); return; }
+    const teams = WQ.get('teams', []);
+    teams.push({ id: WQ.uid(), title, type: mask.querySelector('#ntType').value, desc, need,
+      members: [me.name + '·发起人'], deadline, contact, ts: Date.now() });
+    WQ.set('teams', teams);
+    mask.remove(); curType = '全部'; renderFilter(); renderGrid();
+    emojiBurst(['🚀', '🧩', '✨']);
+    toast('招募发布成功，等队友上门！🧲');
+  };
+};
+
+renderFilter(); renderGrid();
+</script>
+</body>
+</html>

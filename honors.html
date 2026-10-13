@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>荣誉墙 · 无穹55小窝 🏆</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="honors">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
+      <h1>🏆 班级荣誉墙</h1>
+      <div class="sub">咱们班的高光时刻收藏馆——每一块奖牌背后都是一群人的努力。</div>
+    </div>
+    <button class="btn" id="newHonor">➕ 添加荣誉</button>
+  </div>
+
+  <div class="card">
+    <div class="timeline" id="tlList"></div>
+    <div class="empty" id="tlEmpty" style="display:none"><span class="e-ico">🏅</span>还没有荣誉记录，从第一块奖牌开始！</div>
+  </div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 荣誉墙逻辑 ---------- */
+const LEVEL_CLS = { '国家级':'t5', '省级':'t4', '校级':'t2', '院级':'t1' };
+
+function render(){
+  const list = WQ.get('honors', []).slice().sort((a,b) => b.date.localeCompare(a.date));
+  const box = document.getElementById('tlList');
+  document.getElementById('tlEmpty').style.display = list.length ? 'none' : 'block';
+  box.innerHTML = list.map(h => `
+    <div class="tl-item">
+      <div class="tl-date">${h.date} <span class="tag ${LEVEL_CLS[h.level]||'t3'}">${WQ.esc(h.level)}</span></div>
+      <h3><span class="tl-medal">${h.icon||'🏅'}</span>${WQ.esc(h.title)}</h3>
+      <p>${WQ.esc(h.desc||'')}</p>
+      <button class="act" data-del="${h.id}" style="margin-top:4px;padding:2px 10px;font-size:12px">删除</button>
+    </div>`).join('');
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('删掉这条荣誉？')) return;
+    WQ.set('honors', WQ.get('honors', []).filter(x => x.id !== b.dataset.del));
+    render(); toast('已删除 🗑️');
+  });
+}
+
+document.getElementById('newHonor').onclick = () => {
+  ensureMe();
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask show';
+  mask.innerHTML = `
+  <div class="modal">
+    <h3>🏆 添加一项荣誉</h3>
+    <div class="field"><label>荣誉名称</label>
+      <input class="input" id="nhTitle" maxlength="40" placeholder="如：校运会 4×100 接力 第一名"></div>
+    <div style="display:flex;gap:12px">
+      <div class="field" style="flex:1"><label>级别</label>
+        <select class="select" id="nhLevel"><option>班级</option><option>院级</option><option selected>校级</option><option>省级</option><option>国家级</option></select></div>
+      <div class="field" style="flex:1"><label>日期</label>
+        <input class="input" id="nhDate" type="date"></div>
+    </div>
+    <div class="field"><label>背后的小故事（可选）</label>
+      <input class="input" id="nhDesc" maxlength="60" placeholder="如：最后30米反超名场面"></div>
+    <div class="field"><label>奖牌图标</label>
+      <div class="chips" id="nhIcons"></div></div>
+    <div class="m-actions">
+      <button class="btn ghost" id="nhCancel">取消</button>
+      <button class="btn">挂上荣誉墙 ✨</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  const ICONS = ['🏆','🥇','🥈','🥉','🎖️','🌟','🏅','📜'];
+  let icon = '🏆';
+  const iconBox = mask.querySelector('#nhIcons');
+  iconBox.innerHTML = ICONS.map(i => `<span class="chip ${i===icon?'on':''}" data-i="${i}" style="font-size:17px">${i}</span>`).join('');
+  iconBox.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    icon = c.dataset.i;
+    iconBox.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x.dataset.i === icon));
+  });
+  mask.querySelector('#nhDate').value = new Date().toISOString().slice(0, 10);
+  mask.querySelector('#nhCancel').onclick = () => mask.remove();
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  mask.querySelector('.m-actions .btn').onclick = () => {
+    const title = mask.querySelector('#nhTitle').value.trim();
+    const date = mask.querySelector('#nhDate').value;
+    if (!title || !date) { toast('名称和日期要填哦'); return; }
+    const list = WQ.get('honors', []);
+    list.push({ id: WQ.uid(), icon, title, level: mask.querySelector('#nhLevel').value,
+      date, desc: mask.querySelector('#nhDesc').value.trim() });
+    WQ.set('honors', list);
+    mask.remove(); render(); confetti(60); emojiBurst(['🏆', '🥇', '✨']); toast('荣誉 +1！为无穹55鼓掌 👏');
+  };
+};
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日常分享板 · 无穹55小窝 🌿</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="daily">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>🌿 日常分享板</h1>
+    <div class="sub">碎碎念、安利、吐槽、今日份开心都可以发；不开心的事打开"匿名树洞"模式。</div>
+  </div>
+
+  <div class="card composer" style="margin-bottom:22px">
+    <div class="c-row">
+      <div class="c-avatar" id="myAvatar" style="width:44px;height:44px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:22px"></div>
+      <div class="c-main">
+        <textarea class="textarea" id="dyText" maxlength="500" placeholder="今天有什么想说的？"></textarea>
+        <div class="chips" id="dyTags" style="margin-top:10px"></div>
+        <div class="preview-imgs" id="dyPreview"></div>
+        <div class="c-tools">
+          <label class="img-pick">🖼️ 配张图（可选）
+            <input type="file" id="dyFile" accept="image/*" hidden>
+          </label>
+          <label class="switch"><input type="checkbox" id="dyAnon"><span class="track"></span>匿名树洞 🕵️</label>
+          <span class="spacer"></span>
+          <button class="btn" id="dySend">发布 ✨</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feed" id="feed"></div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 日常分享板逻辑 ---------- */
+const TAG_POOL = ['碎碎念', '安利', '吐槽', '今日份开心', '树洞', '美食', '校园', '求助'];
+let selTags = [], imgData = null;
+
+function renderAvatar(){
+  const me = ensureMe(false);
+  const el = document.getElementById('myAvatar');
+  el.textContent = me ? WQ.avatarOf(me.name) : '👻';
+  el.style.cssText += WQ.pastelOf(me ? me.name : 'x');
+}
+
+function renderTagPick(){
+  document.getElementById('dyTags').innerHTML = TAG_POOL.map(t =>
+    `<span class="chip ${selTags.includes(t)?'on':''}" data-t="${t}">#${t}</span>`).join('');
+  document.querySelectorAll('#dyTags .chip').forEach(c => c.onclick = () => {
+    const t = c.dataset.t;
+    selTags.includes(t) ? selTags = selTags.filter(x => x !== t) : selTags.push(t);
+    renderTagPick();
+  });
+}
+
+document.getElementById('dyFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  if (!ensureMe()) return;
+  try { imgData = await compressImage(f, 1000, .8); } catch { toast('这张图读不出来，换一张试试？'); }
+  document.getElementById('dyPreview').innerHTML =
+    imgData ? `<div class="pv"><img src="${imgData}"><button class="x" id="dyImgX">✕</button></div>` : '';
+  const x = document.getElementById('dyImgX');
+  if (x) x.onclick = () => { imgData = null; document.getElementById('dyPreview').innerHTML = ''; };
+});
+
+document.getElementById('dySend').onclick = () => {
+  const me = ensureMe();
+  if (!me) return;
+  const text = document.getElementById('dyText').value.trim();
+  const anon = document.getElementById('dyAnon').checked;
+  if (!text) { toast('说点什么再发嘛～'); return; }
+  if (selTags.includes('树洞') && !anon) { toast('树洞话题建议打开匿名哦 🤫（也可坚持实名）'); }
+  const list = WQ.get('daily', []);
+  list.push({
+    id: WQ.uid(), by: anon ? null : me.name, anon, ts: Date.now(),
+    text, tags: selTags.slice(), img: imgData, likes: [], comments: [],
+  });
+  if (WQ.set('daily', list)) {
+    document.getElementById('dyText').value = '';
+    imgData = null; selTags = [];
+    document.getElementById('dyPreview').innerHTML = '';
+    document.getElementById('dyAnon').checked = false;
+    renderTagPick(); renderFeed();
+    emojiBurst(['🎉', '🌿', '✨']);
+    toast(anon ? '已悄悄投进树洞 🌳' : '发布成功！🌿');
+  }
+};
+
+const TAG_CLS = ['t1','t2','t3','t4','t5'];
+function tagHtml(tags){ return (tags||[]).map((t,i) => `<span class="tag ${TAG_CLS[i%5]}">#${WQ.esc(t)}</span>`).join(' '); }
+
+function renderFeed(){
+  const list = WQ.get('daily', []).slice().sort((a,b) => b.ts - a.ts);
+  const box = document.getElementById('feed');
+  if (!list.length){ box.innerHTML = `<div class="card empty"><span class="e-ico">🌱</span>这里还空空的，发第一条动态吧！</div>`; return; }
+  const me = getMe();
+  box.innerHTML = list.map(p => {
+    const liked = me && p.likes.includes(me.name);
+    return `
+    <div class="card post">
+      <div class="post-head">
+        <div class="p-avatar" style="${WQ.pastelOf(String(p.by))}">${p.anon ? '🕵️' : WQ.avatarOf(p.by)}</div>
+        <div>
+          <b>${p.anon ? '匿名同学' : WQ.esc(p.by)}</b>
+          <div class="p-time">${WQ.fmt(p.ts)} ${tagHtml(p.tags)}</div>
+        </div>
+        <span style="margin-left:auto"></span>
+        <button class="act" data-del="${p.id}" title="删除">🗑️</button>
+      </div>
+      <div class="post-text">${WQ.esc(p.text)}</div>
+      ${p.img ? `<div class="post-img" data-img="${p.id}"><img src="${p.img}"></div>` : ''}
+      <div class="post-foot">
+        <button class="act ${liked?'liked':''}" data-like="${p.id}">${liked?'❤️':'🤍'} 赞 ${p.likes.length || ''}</button>
+        <button class="act" data-cmt="${p.id}">💬 评论 ${p.comments.length || ''}</button>
+      </div>
+      <div class="comments" id="cm-${p.id}" style="display:none">
+        ${p.comments.map(c => `<div class="comment"><b>${WQ.esc(c.by)}：</b><span style="flex:1">${WQ.esc(c.text)}</span></div>`).join('')}
+        <div class="c-input">
+          <input class="input" id="ci-${p.id}" placeholder="说点什么…" style="padding:7px 12px" maxlength="100">
+          <button class="btn sm" data-csend="${p.id}">发送</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('[data-like]').forEach(b => b.onclick = () => {
+    const me = ensureMe(); if (!me) return;
+    const list = WQ.get('daily', []);
+    const p = list.find(x => x.id === b.dataset.like);
+    const i = p.likes.indexOf(me.name);
+    i >= 0 ? p.likes.splice(i, 1) : p.likes.push(me.name);
+    WQ.set('daily', list); renderFeed();
+  });
+  box.querySelectorAll('[data-cmt]').forEach(b => b.onclick = () => {
+    const el = document.getElementById('cm-' + b.dataset.cmt);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') document.getElementById('ci-' + b.dataset.cmt)?.focus();
+  });
+  box.querySelectorAll('[data-csend]').forEach(b => b.onclick = () => {
+    const me = ensureMe(); if (!me) return;
+    const inp = document.getElementById('ci-' + b.dataset.csend);
+    const text = inp.value.trim();
+    if (!text) return;
+    const list = WQ.get('daily', []);
+    list.find(x => x.id === b.dataset.csend).comments.push({ by: me.name, text, ts: Date.now() });
+    WQ.set('daily', list); renderFeed();
+    const el = document.getElementById('cm-' + b.dataset.csend);
+    if (el) el.style.display = 'block';
+    toast('评论成功 💬');
+  });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('删掉这条动态？')) return;
+    WQ.set('daily', WQ.get('daily', []).filter(x => x.id !== b.dataset.del));
+    renderFeed(); toast('已删除 🗑️');
+  });
+  box.querySelectorAll('[data-img]').forEach(el => el.onclick = () => {
+    const p = WQ.get('daily', []).find(x => x.id === el.dataset.img);
+    if (p) openLightbox(p.img, '来自日常分享');
+  });
+}
+
+renderAvatar(); renderTagPick(); renderFeed();
+</script>
+</body>
+</html>

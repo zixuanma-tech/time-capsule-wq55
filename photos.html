@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>照片墙 · 无穹55小窝 📸</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="photos">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>📸 照片墙</h1>
+    <div class="sub">合照、快乐瞬间、表情包……不再散落在各自的朋友圈。点照片可以放大看～</div>
+  </div>
+
+  <div class="card composer" style="margin-bottom:20px">
+    <div class="c-row">
+      <div class="c-avatar" id="myAvatar" style="width:44px;height:44px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:22px"></div>
+      <div class="c-main">
+        <input class="input" id="phTitle" maxlength="30" placeholder="给这张照片起个名字（如：运动会名场面）">
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center">
+          <select class="select" id="phCat" style="width:130px">
+            <option>合照</option><option>活动</option><option>日常</option><option>表情包</option>
+          </select>
+          <label class="img-pick">🖼️ 选择照片（可多选）
+            <input type="file" id="phFile" accept="image/*" multiple hidden>
+          </label>
+          <span class="small muted">照片会自动压缩后存在浏览器里，仅本机可见</span>
+        </div>
+        <div class="preview-imgs" id="phPreview"></div>
+        <div class="c-tools">
+          <span class="small muted">将以 <b id="whoami">?</b> 的名义上传</span>
+          <span class="spacer"></span>
+          <button class="btn" id="phUpload">上传到照片墙 ✨</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filters" id="catFilter"></div>
+  <div class="masonry" id="photoGrid"></div>
+  <div class="empty" id="photoEmpty" style="display:none"><span class="e-ico">🖼️</span>这个分类还没有照片，来传第一张！</div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 照片墙逻辑 ---------- */
+let curCat = '全部';
+let pending = [];   // [{title,cat,dataUrl}]
+
+const CATS = ['全部', '合照', '活动', '日常', '表情包'];
+
+function renderAvatar(){
+  const me = ensureMe(false);
+  const el = document.getElementById('myAvatar');
+  el.textContent = me ? WQ.avatarOf(me.name) : '👻';
+  el.style.cssText += WQ.pastelOf(me ? me.name : 'x');
+  document.getElementById('whoami').textContent = me ? me.name : '(点右上角设置昵称)';
+}
+
+function renderFilters(){
+  const photos = WQ.get('photos', []);
+  document.getElementById('catFilter').innerHTML = CATS.map(c => {
+    const n = c === '全部' ? photos.length : photos.filter(p => p.cat === c).length;
+    return `<span class="chip ${c===curCat?'on':''}" data-c="${c}">${c} ${n}</span>`;
+  }).join('');
+  document.querySelectorAll('#catFilter .chip').forEach(ch =>
+    ch.onclick = () => { curCat = ch.dataset.c; renderFilters(); renderGrid(); });
+}
+
+function phInner(p){
+  if (p.dataUrl) return `<img src="${p.dataUrl}" alt="${WQ.esc(p.title)}" style="cursor:zoom-in">`;
+  // 占位图高度按 id 取 210/250/290 三档，让瀑布流有错落感
+  const h = [210, 250, 290][Math.abs([...String(p.id)].reduce((a,c)=>a+c.codePointAt(0),0)) % 3];
+  return `<div class="ph-holder" style="background:${p.grad};height:${h}px;cursor:zoom-in">${p.emo||'🖼️'}</div>`;
+}
+
+function renderGrid(){
+  const photos = WQ.get('photos', []).slice().sort((a,b) => b.date - a.date);
+  const list = curCat === '全部' ? photos : photos.filter(p => p.cat === curCat);
+  document.getElementById('photoEmpty').style.display = list.length ? 'none' : 'block';
+  document.getElementById('photoGrid').innerHTML = list.map(p => `
+    <div class="photo" data-id="${p.id}">
+      <div onclick="viewPhoto('${p.id}')">${phInner(p)}</div>
+      <button class="del" title="删除" onclick="delPhoto(event,'${p.id}')">✕</button>
+      <div class="cap"><b>${WQ.esc(p.title)}</b>
+        <span class="small">${WQ.esc(p.by)} · ${WQ.fmt(p.date)} · <span class="tag t1">${WQ.esc(p.cat)}</span></span>
+      </div>
+    </div>`).join('');
+}
+
+window.viewPhoto = id => {
+  const p = WQ.get('photos', []).find(x => x.id === id);
+  if (!p) return;
+  openLightbox(p.dataUrl || p.grad, `${p.title} · ${p.by}`, !p.dataUrl);
+};
+window.delPhoto = (e, id) => {
+  e.stopPropagation();
+  if (!confirm('确定删掉这张照片吗？')) return;
+  WQ.set('photos', WQ.get('photos', []).filter(x => x.id !== id));
+  renderFilters(); renderGrid(); toast('已删除 🗑️');
+};
+
+/* 上传 */
+document.getElementById('phFile').addEventListener('change', async e => {
+  const me = ensureMe();
+  if (!me) { e.target.value = ''; return; }
+  for (const f of e.target.files) {
+    try {
+      const dataUrl = await compressImage(f);
+      pending.push({ title: document.getElementById('phTitle').value.trim() || f.name.replace(/\.[^.]+$/, ''), cat: document.getElementById('phCat').value, dataUrl });
+    } catch { toast('这张图读不出来，换一张试试？'); }
+  }
+  e.target.value = '';
+  renderPreview();
+});
+function renderPreview(){
+  document.getElementById('phPreview').innerHTML = pending.map((p,i) => `
+    <div class="pv"><img src="${p.dataUrl}"><button class="x" data-i="${i}">✕</button></div>`).join('');
+  document.querySelectorAll('#phPreview .x').forEach(b => b.onclick = () => { pending.splice(+b.dataset.i,1); renderPreview(); });
+}
+document.getElementById('phUpload').onclick = () => {
+  const me = ensureMe();
+  if (!me) return;
+  if (!pending.length) { toast('先选一张照片嘛 📷'); return; }
+  const title = document.getElementById('phTitle').value.trim();
+  const cat = document.getElementById('phCat').value;
+  const photos = WQ.get('photos', []);
+  pending.forEach((p, i) => photos.push({
+    id: WQ.uid(), title: (pending.length > 1 && title ? title + ' ' + (i+1) : (p.title || title)) || '未命名照片',
+    cat: p.cat || cat, dataUrl: p.dataUrl, by: me.name, date: Date.now() - i,
+  }));
+  const ok = WQ.set('photos', photos);
+  if (ok) { pending = []; renderPreview(); document.getElementById('phTitle').value = ''; renderFilters(); renderGrid(); emojiBurst(['📸', '✨', '🎉']); toast('上传成功，感谢投喂！🎉'); }
+};
+
+renderAvatar(); renderFilters(); renderGrid();
+</script>
+</body>
+</html>

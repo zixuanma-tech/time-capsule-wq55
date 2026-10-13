@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>匿名提问箱 · 无穹55小窝 📮</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📮</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="ask">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
+      <h1>📮 匿名提问箱</h1>
+      <div class="sub">不好意思当面问的，写下来投进箱子——班主任/辅导员/班委会上线回答。提问完全匿名，谁也看不到是谁问的（包括班委）。</div>
+    </div>
+    <button class="teacher-badge" id="teacherBtn"></button>
+  </div>
+
+  <div class="card composer" style="margin-bottom:22px">
+    <div class="set-row" style="margin-bottom:10px"><b>选个话题</b>
+      <div class="chips" id="qCats"></div>
+    </div>
+    <textarea class="textarea" id="qText" maxlength="200" placeholder="比如：绩点到底怎么算的？/ 宿舍熄灯以后太吵怎么办？/ 保研和考研怎么选……"></textarea>
+    <div class="c-tools">
+      <span class="small muted">🕵️ 无需登录、完全匿名</span>
+      <span class="spacer"></span>
+      <button class="btn" id="qSend">投进提问箱 🤫</button>
+    </div>
+  </div>
+
+  <div class="filters" id="qFilter"></div>
+  <div id="qList"></div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 提问箱逻辑 ---------- */
+const CATS = ['学习', '生活', '心理', '班级事务', '其他'];
+const CAT_CLS = { '学习':'t1', '生活':'t2', '心理':'t4', '班级事务':'t3', '其他':'t5' };
+const ROLES = ['班主任', '辅导员', '班委', '心理委员', '任课老师'];
+const ROLE_CLS = { '班主任':'r1', '辅导员':'r2', '班委':'r3', '心理委员':'r4', '任课老师':'r3' };
+let curFilter = '全部', curCat = '生活';
+
+function deviceId() {
+  let id = localStorage.getItem('wq55_devid');
+  if (!id) { id = WQ.uid(); localStorage.setItem('wq55_devid', id); }
+  return id;
+}
+const isTeacher = () => sessionStorage.getItem('wq55_teacher') === '1';
+const ANSWER_KEY = () => localStorage.getItem('wq55_answer_key') || 'wq55';
+
+function renderTeacherBtn(){
+  document.getElementById('teacherBtn').innerHTML =
+    isTeacher() ? '🔒 已解锁老师模式（点击退出）' : '🔑 老师 / 班委通道';
+}
+document.getElementById('teacherBtn').onclick = () => {
+  if (isTeacher()) { sessionStorage.removeItem('wq55_teacher'); renderTeacherBtn(); render(); toast('已退出老师模式'); return; }
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask show';
+  mask.innerHTML = `
+  <div class="modal">
+    <h3>🔑 老师通道</h3>
+    <div class="field"><label>回答口令</label>
+      <input class="input" id="tkKey" type="password" placeholder="默认口令 wq55，班委可修改"></div>
+    <div class="m-actions" style="justify-content:space-between">
+      <button class="btn ghost sm" id="tkChange">修改口令</button>
+      <button class="btn" id="tkOk">解锁回答模式</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#tkOk').onclick = () => {
+    if (mask.querySelector('#tkKey').value === ANSWER_KEY()) {
+      sessionStorage.setItem('wq55_teacher', '1');
+      mask.remove(); renderTeacherBtn(); render();
+      toast('欢迎老师！可以开始回答问题了 🙏');
+    } else toast('口令不对哦');
+  };
+  mask.querySelector('#tkChange').onclick = () => {
+    const oldK = prompt('输入当前口令：');
+    if (oldK === null) return;
+    if (oldK !== ANSWER_KEY()) { toast('当前口令不对'); return; }
+    const newK = prompt('输入新口令（至少4位）：') || '';
+    if (newK.trim().length < 4) { toast('新口令太短了'); return; }
+    localStorage.setItem('wq55_answer_key', newK.trim());
+    toast('口令已更新 🔐');
+  };
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+};
+
+function renderCats(){
+  document.getElementById('qCats').innerHTML = CATS.map(c =>
+    `<span class="chip ${c===curCat?'on':''}" data-c="${c}">${c}</span>`).join('');
+  document.querySelectorAll('#qCats .chip').forEach(ch =>
+    ch.onclick = () => { curCat = ch.dataset.c; renderCats(); });
+}
+document.getElementById('qSend').onclick = () => {
+  const text = document.getElementById('qText').value.trim();
+  if (!text) { toast('箱子里得有个问题呀～'); return; }
+  const list = WQ.get('askbox', []);
+  list.push({ id: WQ.uid(), text, cat: curCat, ts: Date.now(), votes: 0, voters: [], answers: [] });
+  if (WQ.set('askbox', list)) {
+    document.getElementById('qText').value = '';
+    renderFilter(); render();
+    emojiBurst(['📮', '🤫', '✨']);
+    toast('已匿名投递，等老师上线回答 🙏');
+  }
+};
+
+function renderFilter(){
+  const list = WQ.get('askbox', []);
+  const wait = list.filter(q => !q.answers.length).length;
+  const opts = [['全部', list.length], ['待回答', wait], ['已回答', list.length - wait]];
+  document.getElementById('qFilter').innerHTML = opts.map(([k, n]) =>
+    `<span class="chip ${k===curFilter?'on':''}" data-f="${k}">${k} ${n}</span>`).join('');
+  document.querySelectorAll('#qFilter .chip').forEach(c =>
+    c.onclick = () => { curFilter = c.dataset.f; renderFilter(); render(); });
+}
+
+function render(){
+  const list = WQ.get('askbox', []).slice();
+  const answered = q => q.answers.length > 0;
+  let qs = list.sort((a, b) => (answered(a) - answered(b)) || (b.votes - a.votes) || (b.ts - a.ts));
+  if (curFilter === '待回答') qs = qs.filter(q => !answered(q));
+  if (curFilter === '已回答') qs = qs.filter(answered);
+  const box = document.getElementById('qList');
+  if (!qs.length) {
+    box.innerHTML = `<div class="card empty"><span class="e-ico">📮</span>${curFilter === '全部' ? '提问箱还是空的，来问第一个问题！' : '这里暂时没有' + curFilter + '的问题'}</div>`;
+    return;
+  }
+  const me = deviceId();
+  box.innerHTML = qs.map(q => `
+  <div class="card qa-card">
+    <div class="qa-head">
+      <span class="qa-q">${WQ.esc(q.text)}</span>
+      <span class="qa-status ${answered(q) ? 'done' : 'wait'}">${answered(q) ? '💡 已回答' : '🕳️ 待回答'}</span>
+    </div>
+    <div class="qa-meta">
+      <span class="tag ${CAT_CLS[q.cat] || 't5'}">${WQ.esc(q.cat)}</span>
+      <span>${WQ.fmt(q.ts)}</span>
+      <button class="qa-vote ${q.voters.includes(me) ? 'voted' : ''}" data-vote="${q.id}">🙋 同想知道 +${q.votes}</button>
+      ${isTeacher() ? `<button class="act" data-del="${q.id}" style="padding:2px 10px;font-size:12px">删除</button>` : ''}
+    </div>
+    ${q.answers.map(a => `
+    <div class="answer">
+      <div class="a-top">
+        <span class="a-role ${ROLE_CLS[a.role] || 'r3'}">${WQ.esc(a.role)}</span>
+        <b style="font-size:13.5px">${WQ.esc(a.name || '一位不愿透露姓名的老师')}</b>
+      </div>
+      <div class="a-text">${WQ.esc(a.text)}</div>
+      <div class="a-time">${WQ.fmt(a.ts)}</div>
+    </div>`).join('')}
+    ${isTeacher() ? `
+    <div class="a-form">
+      <div class="row">
+        <select class="select" id="role-${q.id}" style="width:130px">${ROLES.map(r => `<option>${r}</option>`).join('')}</select>
+        <input class="input" id="name-${q.id}" maxlength="10" placeholder="署名（可留空）" style="width:160px">
+      </div>
+      <textarea class="textarea" id="ans-${q.id}" maxlength="600" style="min-height:70px" placeholder="认真回答同学的问题…"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn sm teal" data-answer="${q.id}">提交回答 💡</button>
+      </div>
+    </div>` : ''}
+  </div>`).join('');
+
+  box.querySelectorAll('[data-vote]').forEach(b => b.onclick = () => {
+    const list = WQ.get('askbox', []);
+    const q = list.find(x => x.id === b.dataset.vote);
+    const me = deviceId();
+    const i = q.voters.indexOf(me);
+    if (i >= 0) { q.voters.splice(i, 1); q.votes = Math.max(0, q.votes - 1); }
+    else { q.voters.push(me); q.votes++; }
+    WQ.set('askbox', list); render();
+  });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('删除这个问题？（仅老师模式可见此按钮）')) return;
+    WQ.set('askbox', WQ.get('askbox', []).filter(x => x.id !== b.dataset.del));
+    renderFilter(); render(); toast('已删除');
+  });
+  box.querySelectorAll('[data-answer]').forEach(b => b.onclick = () => {
+    const id = b.dataset.answer;
+    const role = document.getElementById('role-' + id).value;
+    const name = document.getElementById('name-' + id).value.trim();
+    const text = document.getElementById('ans-' + id).value.trim();
+    if (!text) { toast('回答不能为空哦'); return; }
+    const list = WQ.get('askbox', []);
+    list.find(x => x.id === id).answers.push({ role, name, text, ts: Date.now() });
+    WQ.set('askbox', list);
+    renderFilter(); render();
+    emojiBurst(['💡', '🌟', '🙏']);
+    toast('回答已发布，同学会感谢你的！');
+  });
+}
+
+renderTeacherBtn(); renderCats(); renderFilter(); render();
+</script>
+</body>
+</html>

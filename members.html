@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>同学们 · 无穹55小窝 👥</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👥</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="members">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
+      <h1>👥 咱们班的同学们</h1>
+      <div class="sub">一人一张卡片、一句自我介绍。目标：走在校园里，能对上脸、叫出名。</div>
+    </div>
+    <button class="btn" id="newMember">➕ 加我进来</button>
+  </div>
+
+  <div class="member-grid" id="memberGrid"></div>
+  <div class="empty" id="memberEmpty" style="display:none"><span class="e-ico">👤</span>还没有人登记，来当第一个！</div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 成员墙逻辑 ---------- */
+const TAG_CLS = ['t1','t2','t3','t4','t5'];
+
+function render(){
+  const list = WQ.get('members', []);
+  const box = document.getElementById('memberGrid');
+  document.getElementById('memberEmpty').style.display = list.length ? 'none' : 'block';
+  box.innerHTML = list.map(m => `
+    <div class="card member">
+      <div class="m-emoji" style="${WQ.pastelOf(m.name)}">${m.emo || WQ.avatarOf(m.name)}</div>
+      <b>${WQ.esc(m.name)}</b>
+      <div class="m-tagline">${WQ.esc(m.tagline || '这个人很懒，还没写介绍')}</div>
+      <div class="m-tags">${(m.tags||[]).map((t,i) => `<span class="tag ${TAG_CLS[i%5]}">${WQ.esc(t)}</span>`).join(' ')}</div>
+      ${m.link ? `<a class="m-link" href="${WQ.esc(m.link)}" target="_blank" rel="noopener">🔗 个人主页</a>` : ''}
+      <button class="act" data-del="${m.id}" style="padding:2px 10px;font-size:12px;margin-top:8px">移除</button>
+    </div>`).join('');
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('把这位同学从成员墙移除？')) return;
+    WQ.set('members', WQ.get('members', []).filter(x => x.id !== b.dataset.del));
+    render(); toast('已移除');
+  });
+}
+
+document.getElementById('newMember').onclick = () => {
+  ensureMe();
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask show';
+  mask.innerHTML = `
+  <div class="modal">
+    <h3>👥 登记一张成员卡</h3>
+    <div class="field"><label>昵称 / 姓名</label>
+      <input class="input" id="nmName" maxlength="12" placeholder="如：老王"></div>
+    <div class="field"><label>一句自我介绍</label>
+      <input class="input" id="nmTagline" maxlength="30" placeholder="如：宿舍楼下的猫都认识我"></div>
+    <div class="field"><label>标签（用空格分隔）</label>
+      <input class="input" id="nmTags" maxlength="40" placeholder="如：摄影担当 猫奴 夜跑"></div>
+    <div class="field"><label>个人主页链接（选填）</label>
+      <input class="input" id="nmLink" placeholder="如：https://github.com/你 或博客地址"></div>
+    <div class="field"><label>选个头像</label>
+      <div class="chips" id="nmEmos"></div></div>
+    <div class="m-actions">
+      <button class="btn ghost" id="nmCancel">取消</button>
+      <button class="btn">上墙 🙋</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  const EMOS = ['🐧','🐯','🐼','🦊','🐰','🐸','🐙','🦄','🐨','🐷','🐵','🦁','🐮','🐔','🦉','🐲','🐳','🍞','🧋','🌻'];
+  let emo = '🐧';
+  const em = mask.querySelector('#nmEmos');
+  em.innerHTML = EMOS.map(i => `<span class="chip ${i===emo?'on':''}" data-i="${i}" style="font-size:17px">${i}</span>`).join('');
+  em.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    emo = c.dataset.i;
+    em.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x.dataset.i === emo));
+  });
+  const me = getMe();
+  if (me) mask.querySelector('#nmName').value = me.name;
+  mask.querySelector('#nmCancel').onclick = () => mask.remove();
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  mask.querySelector('.m-actions .btn').onclick = () => {
+    const name = mask.querySelector('#nmName').value.trim();
+    if (!name) { toast('得有个名字呀'); return; }
+    const link = mask.querySelector('#nmLink').value.trim();
+    if (link && !/^https?:\/\//.test(link)) { toast('主页链接要以 http(s):// 开头哦'); return; }
+    const list = WQ.get('members', []);
+    list.push({
+      id: WQ.uid(), name, emo,
+      tagline: mask.querySelector('#nmTagline').value.trim(),
+      tags: mask.querySelector('#nmTags').value.trim().split(/\s+/).filter(Boolean).slice(0, 4),
+      link: link || undefined,
+    });
+    WQ.set('members', list);
+    mask.remove(); render();
+    emojiBurst(['🙋', '🏠', '🎉']);
+    toast('欢迎上墙！🎉');
+  };
+};
+
+render();
+</script>
+</body>
+</html>

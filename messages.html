@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>留言板 · 无穹55小窝 💬</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="messages">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>💬 留言板</h1>
+    <div class="sub">想发就发的小气泡，会在上面飘来飘去～ 点气泡看全文，想匿名就匿名。</div>
+  </div>
+
+  <div class="card composer" style="margin-bottom:20px">
+    <div class="c-row">
+      <div class="c-avatar" id="myAvatar" style="width:44px;height:44px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:22px"></div>
+      <div class="c-main">
+        <textarea class="textarea" id="msgText" maxlength="120" placeholder="说点什么吧～（比如：谁的高数作业写完了，在线等）" style="min-height:70px"></textarea>
+        <div class="c-tools">
+          <label class="switch"><input type="checkbox" id="msgAnon"><span class="track"></span>匿名飘出</label>
+          <span class="small muted" id="counter">0 / 120</span>
+          <span class="spacer"></span>
+          <button class="btn" id="msgSend">发射气泡 🫧</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bubble-pool" id="bubblePool"></div>
+
+  <h3 style="margin:26px 0 6px;font-size:18px">📜 全部留言</h3>
+  <div class="msg-list card" id="msgList" style="padding:8px 20px"></div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 留言板逻辑 ---------- */
+function renderAvatar(){
+  const me = ensureMe(false);
+  const el = document.getElementById('myAvatar');
+  el.textContent = me ? WQ.avatarOf(me.name) : '👻';
+  el.style.cssText += WQ.pastelOf(me ? me.name : 'x');
+}
+
+document.getElementById('msgText').addEventListener('input', e =>
+  document.getElementById('counter').textContent = `${e.target.value.length} / 120`);
+
+document.getElementById('msgSend').onclick = () => {
+  const me = ensureMe();
+  if (!me) return;
+  const text = document.getElementById('msgText').value.trim();
+  const anon = document.getElementById('msgAnon').checked;
+  if (!text) { toast('气泡里得有点字呀～'); return; }
+  const msgs = WQ.get('messages', []);
+  msgs.push({ id: WQ.uid(), text, by: anon ? null : me.name, anon, ts: Date.now() });
+  WQ.set('messages', msgs);
+  document.getElementById('msgText').value = '';
+  document.getElementById('counter').textContent = '0 / 120';
+  document.getElementById('msgAnon').checked = false;
+  renderBubbles(); renderList();
+  emojiBurst(['🫧', '💬', '✨']);
+  toast(anon ? '匿名气泡飘出去了 🕵️' : '气泡发射成功！🫧');
+};
+
+/* ---- 漂浮气泡 ---- */
+function renderBubbles(){
+  const pool = document.getElementById('bubblePool');
+  const msgs = WQ.get('messages', []).slice().sort((a,b) => b.ts - a.ts).slice(0, 14);
+  const W = pool.clientWidth || 1000, H = pool.clientHeight || 420;
+  // 划分成网格槽位再打乱，避免气泡全挤在一起
+  const cols = Math.max(3, Math.floor(W / 260)), rows = 3;
+  const slots = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) slots.push([r, c]);
+  slots.sort(() => Math.random() - .5);
+  pool.innerHTML = msgs.map((m, i) => {
+    const [r, c] = slots[i % slots.length];
+    const left = (c + .06 + Math.random() * .5) / cols;
+    const top = (r + .12 + Math.random() * .5) / rows;
+    const dur = 3.5 + Math.random() * 3;
+    const short = m.text.length > 42 ? m.text.slice(0, 40) + '…' : m.text;
+    return `<div class="bub" style="${WQ.pastelOf(m.id + m.by)};left:${Math.min(left * 100, 88)}%;top:${Math.min(top * 100, 80)}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s" data-id="${m.id}">
+      ${WQ.esc(short)}<span class="who">${m.anon ? '🕵️ 匿名' : WQ.esc(m.by)}</span>
+    </div>`;
+  }).join('');
+  pool.querySelectorAll('.bub').forEach(b => b.onclick = () => {
+    const m = WQ.get('messages', []).find(x => x.id === b.dataset.id);
+    if (!m) return;
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask show';
+    mask.innerHTML = `<div class="modal">
+      <div style="font-size:15.5px;line-height:1.9;padding:6px 2px;white-space:pre-wrap;word-break:break-all">${WQ.esc(m.text)}</div>
+      <div class="small muted" style="text-align:right;margin-top:10px">${m.anon ? '🕵️ 匿名同学' : WQ.esc(m.by)} · ${WQ.fmt(m.ts)}</div>
+      <div class="m-actions"><button class="btn ghost" id="bubClose">关掉</button></div>
+    </div>`;
+    document.body.appendChild(mask);
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    mask.querySelector('#bubClose').onclick = () => mask.remove();
+  });
+}
+
+/* ---- 列表 ---- */
+function renderList(){
+  const msgs = WQ.get('messages', []).slice().sort((a,b) => b.ts - a.ts);
+  const box = document.getElementById('msgList');
+  if (!msgs.length){ box.innerHTML = `<div class="empty"><span class="e-ico">💬</span>还没有留言，发第一条！</div>`; return; }
+  box.innerHTML = msgs.map(m => `
+    <div class="msg-item">
+      <div class="m-avatar" style="${WQ.pastelOf(m.id + m.by)}">${m.anon ? '🕵️' : WQ.avatarOf(m.by)}</div>
+      <div class="m-body">
+        <div class="m-meta"><b>${m.anon ? '匿名同学' : WQ.esc(m.by)}</b><span>${WQ.fmt(m.ts)}</span>
+          <button class="act" style="padding:2px 8px;font-size:12px" data-del="${m.id}">删除</button>
+        </div>
+        <div class="m-text">${WQ.esc(m.text)}</div>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('删掉这条留言？')) return;
+    WQ.set('messages', WQ.get('messages', []).filter(x => x.id !== b.dataset.del));
+    renderBubbles(); renderList(); toast('已删除 🗑️');
+  });
+}
+
+let rsT;
+window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(renderBubbles, 300); });
+
+renderAvatar(); renderBubbles(); renderList();
+</script>
+</body>
+</html>

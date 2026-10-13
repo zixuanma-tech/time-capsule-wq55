@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>无穹55 · 小窝 🏠</title>
+<meta name="description" content="无穹55班班级网站：照片墙、留言板、日常分享、组队招募、经验分享、荣誉墙">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="index">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hi" id="heroHi">同学你好呀 👋</div>
+    <h1>无穹55 · 小窝</h1>
+    <p>不是谁一个人的网站，是咱们一起的小基地、小门面、小回忆收容所。<br>
+    传照片、发碎碎念、捞队友、写经验 —— 常回来看看！(๑•̀ㅂ•́)و✧</p>
+    <span class="hero-dragon" title="摸摸我">🐲</span>
+    <div class="hero-stickers">
+      <span style="left:46%;top:24%;animation-delay:.4s">⭐</span>
+      <span style="left:60%;top:14%;animation-delay:1.2s">☁️</span>
+      <span style="left:38%;bottom:18%;animation-delay:.8s">🌈</span>
+    </div>
+  </section>
+
+  <!-- Widgets -->
+  <div class="home-grid">
+    <div class="card widget col-4">
+      <h3>⏰ 最近倒计时 <a class="more" href="#" id="manageEvents">管理</a></h3>
+      <div id="cdList"></div>
+    </div>
+    <div class="card widget col-4">
+      <h3>🎂 生日提醒 <a class="more" href="#" id="manageBirthdays">管理</a></h3>
+      <div id="bdList"></div>
+    </div>
+    <div class="card widget col-4" id="quoteCard">
+      <h3>🍀 今日份小确幸</h3>
+      <div class="quote" id="quoteText"></div>
+    </div>
+
+    <div class="card widget col-8">
+      <h3>🌿 最新动态 <a class="more" href="daily.html">去发布 →</a></h3>
+      <div id="latestFeed"></div>
+    </div>
+    <div class="card widget col-4">
+      <h3>📊 小窝大数据</h3>
+      <div class="boards" style="grid-template-columns:1fr 1fr;margin-top:4px" id="statsGrid"></div>
+    </div>
+  </div>
+
+  <!-- 板块入口 -->
+  <h3 style="margin:30px 0 4px;font-size:19px">🎒 小窝的房间们</h3>
+  <p class="muted small" style="margin-bottom:0">每个房间都缺一个主角：你。</p>
+  <div class="boards">
+    <a class="board-card" href="photos.html">
+      <div class="bico" style="background:var(--primary-soft)">📸</div>
+      <h3>照片墙</h3><p>合照、快乐瞬间，不再散落在朋友圈</p>
+      <span class="arrow">→</span>
+    </a>
+    <a class="board-card" href="messages.html">
+      <div class="bico" style="background:var(--teal-soft)">💬</div>
+      <h3>留言板</h3><p>像QQ动态那样飘来飘去的气泡</p>
+      <span class="arrow">→</span>
+    </a>
+    <a class="board-card" href="daily.html">
+      <div class="bico" style="background:var(--yellow-soft)">🌿</div>
+      <h3>日常分享板</h3><p>碎碎念、安利、吐槽、匿名树洞</p>
+      <span class="arrow">→</span>
+    </a>
+    <a class="board-card" href="teams.html">
+      <div class="bico" style="background:var(--violet-soft)">🧩</div>
+      <h3>组队邀请板</h3><p>缺队友？这里是统一的招募页</p>
+      <span class="arrow">→</span>
+    </a>
+    <a class="board-card" href="experience.html">
+      <div class="bico" style="background:var(--teal-soft)">📚</div>
+      <h3>经验分享帖</h3><p>学习、竞赛、选课、科研，互相捞一把</p>
+      <span class="arrow">→</span>
+    </a>
+    <a class="board-card" href="honors.html">
+      <div class="bico" style="background:var(--yellow-soft)">🏆</div>
+      <h3>荣誉墙</h3><p>咱们班的高光时刻收藏馆</p>
+      <span class="arrow">→</span>
+    </a>
+    <a class="board-card" href="members.html">
+      <div class="bico" style="background:var(--pink-soft)">👥</div>
+      <h3>同学们</h3><p>每人一句自我介绍，认认面孔</p>
+      <span class="arrow">→</span>
+    </a>
+    <a class="board-card" href="askbox.html">
+      <div class="bico" style="background:var(--violet-soft)">📮</div>
+      <h3>匿名提问箱</h3><p>不好意思当面问的，老师会上线回答</p>
+      <span class="arrow">→</span>
+    </a>
+    <div class="board-card" style="border-style:dashed;cursor:default">
+      <div class="bico" style="background:var(--bg-2)">🚧</div>
+      <h3>下一个房间？</h3><p>二手交换、失物招领……想做就来找班委</p>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <b>无穹55 · 小窝</b> — 由全班一起搭建 🏠<br>
+  这里收容我们的照片、玩笑、热血和回忆 · <span id="year"></span>
+</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 首页逻辑 ---------- */
+const QUOTES = [
+  ['今天也是被同学们治愈的一天。', '—— 某个潜水员'],
+  ['DDL是第一生产力，但朋友是第一续航力。', '—— 咕咕'],
+  ['无穹无穹，上下求索，五十五人，一路同行。', '—— 班徽背面（瞎编的）'],
+  ['食堂的汤会凉，班群的梗不会。', '—— 奶茶三分甜'],
+  ['只要有人在，教室后排也发光。', '—— 老王'],
+  ['慢慢来，比较快。', '—— 树洞'],
+  ['今天进组打比赛，明天一起领奖状。', '—— 阿北'],
+  ['无穹55：我们不是55个人，是1个班。', '—— 班长·阿凯'],
+];
+
+function renderHero(){
+  const me = getMe();
+  const el = document.getElementById('heroHi');
+  const now = new Date(), h = now.getHours();
+  const hello = h < 6 ? '夜深了' : h < 11 ? '早上好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好';
+  const wk = ['日','一','二','三','四','五','六'][now.getDay()];
+  el.textContent = `${hello}呀${me ? '，' + me.name : ''} 👉 今天是 ${now.getMonth()+1}月${now.getDate()}日 星期${wk}`;
+}
+
+function renderCountdown(){
+  const evs = WQ.get('events', []);
+  const box = document.getElementById('cdList');
+  if (!evs.length){ box.innerHTML = `<div class="empty" style="padding:24px"><span class="e-ico">📅</span>还没有日程，点右上角"管理"加一个</div>`; return; }
+  box.innerHTML = evs.slice(0,5).map(e => {
+    const n = WQ.daysToDate(e.date);
+    const num = n > 0 ? n : (n === 0 ? '今' : '结束');
+    const unit = n > 0 ? '天后' : (n === 0 ? '天就是' : '啦');
+    return `<div class="cd-item">
+      <div class="cd-num">${num}<small>${n>=0?'days':'完'}</small></div>
+      <div><div class="cd-info">${WQ.esc(e.name)}</div>
+      <div class="small muted">${WQ.esc(e.note||'')} · ${e.date}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderBirthdays(){
+  const bds = WQ.get('birthdays', []);
+  const box = document.getElementById('bdList');
+  if (!bds.length){ box.innerHTML = `<div class="empty" style="padding:24px"><span class="e-ico">🎂</span>还没有生日记录</div>`; return; }
+  const sorted = bds.map(b => ({ ...b, days: WQ.daysUntil(b.date) })).sort((a,b) => a.days - b.days);
+  box.innerHTML = sorted.slice(0,5).map(b => `
+    <div class="bd-item ${b.days === 0 ? 'today' : ''}">
+      <span class="cake">${b.days === 0 ? '🎂' : '🍰'}</span>
+      <div style="flex:1">
+        <b style="font-size:14.5px">${WQ.esc(b.name)}</b>
+        <span class="small muted"> · ${b.date}</span>
+        <div class="small" style="color:var(--primary-2);font-weight:600">${
+          b.days === 0 ? '🎉 今天生日！快去班群祝福！' :
+          b.days === 1 ? '明天就生日啦，悄悄准备一下？' :
+          `还有 ${b.days} 天`}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderQuote(){
+  const now = new Date();
+  const idx = (now.getFullYear()*372 + now.getMonth()*31 + now.getDate()) % QUOTES.length;
+  const [q, from] = QUOTES[idx];
+  document.getElementById('quoteText').innerHTML =
+    `${WQ.esc(q)}<span class="from">${WQ.esc(from)} · 点一下换一句</span>`;
+  document.getElementById('quoteCard').onclick = () => {
+    const [q2, f2] = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+    document.getElementById('quoteText').innerHTML = `${WQ.esc(q2)}<span class="from">${WQ.esc(f2)}</span>`;
+  };
+}
+
+function renderLatest(){
+  const list = WQ.get('daily', []);
+  const box = document.getElementById('latestFeed');
+  if (!list.length){ box.innerHTML = `<div class="empty" style="padding:24px"><span class="e-ico">🌿</span>还没有动态，去发第一条！</div>`; return; }
+  box.innerHTML = [...list].sort((a,b)=>b.ts-a.ts).slice(0,4).map(p => `
+    <div class="cd-item" style="cursor:default">
+      <span style="font-size:22px">${p.anon ? '🕵️' : WQ.avatarOf(p.by)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600">${p.anon ? '匿名同学' : WQ.esc(p.by)}
+          <span class="small muted" style="font-weight:400"> · ${WQ.fmt(p.ts)}</span></div>
+        <div class="small muted" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${WQ.esc(p.text)}</div>
+      </div>
+      <span class="small" style="color:#E05C7E">❤ ${p.likes.length}</span>
+    </div>`).join('');
+}
+
+function renderStats(){
+  const items = [
+    ['👥', WQ.get('members',[]).length + ' 位', '同学'],
+    ['📸', WQ.get('photos',[]).length + ' 张', '照片'],
+    ['💬', WQ.get('messages',[]).length + ' 条', '留言'],
+    ['🌿', WQ.get('daily',[]).length + ' 条', '动态'],
+    ['🏆', WQ.get('honors',[]).length + ' 项', '荣誉'],
+    ['📚', WQ.get('xposts',[]).length + ' 篇', '经验帖'],
+    ['📮', WQ.get('askbox',[]).length + ' 个', '提问'],
+    ['🧩', WQ.get('teams',[]).length + ' 个', '招募中队伍'],
+  ];
+  document.getElementById('statsGrid').innerHTML = items.map(([e,n,l]) => `
+    <div style="text-align:center;padding:8px 4px">
+      <div style="font-size:24px">${e}</div>
+      <div style="font-weight:800;color:var(--primary-2)">${n}</div>
+      <div class="small muted">${l}</div>
+    </div>`).join('');
+}
+
+/* ---- 倒计时 / 生日 管理 ---- */
+function openManage(kind){
+  const isEv = kind === 'events';
+  const data = WQ.get(kind, []);
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask show';
+  mask.innerHTML = `
+  <div class="modal">
+    <h3>${isEv ? '⏰ 管理活动倒计时' : '🎂 管理生日提醒'}</h3>
+    <div>${data.map((x, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)">
+        <b style="flex:1">${WQ.esc(x.name)}</b>
+        <span class="tag ${isEv ? 't2' : 't1'}">${x.date}</span>
+        <button class="btn ghost sm" data-i="${i}">删除</button>
+      </div>`).join('') || '<div class="muted small" style="padding:10px 0">暂无记录</div>'}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <input class="input" id="mngName" placeholder="名称（如：运动会 / 张三）" style="flex:1">
+      <input class="input" id="mngDate" placeholder="${isEv ? '2026-12-31' : '01-01'}" style="width:130px">
+    </div>
+    <div class="m-actions">
+      <button class="btn ghost" id="mngClose">关闭</button>
+      <button class="btn" id="mngAdd">添加</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  mask.querySelector('#mngClose').onclick = () => mask.remove();
+  mask.querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
+    data.splice(+b.dataset.i, 1); WQ.set(kind, data); mask.remove(); openManage(kind); refresh();
+  });
+  mask.querySelector('#mngAdd').onclick = () => {
+    const name = mask.querySelector('#mngName').value.trim();
+    const date = mask.querySelector('#mngDate').value.trim();
+    if (!name || !date) { toast('名称和日期都要填哦'); return; }
+    const ok = isEv ? /^\d{4}-\d{2}-\d{2}$/.test(date) : /^\d{2}-\d{2}$/.test(date);
+    if (!ok) { toast(isEv ? '日期格式：2026-12-31' : '日期格式：01-01（月-日）'); return; }
+    data.push(isEv ? { name, date, note: '' } : { name, date });
+    WQ.set(kind, data); mask.remove(); toast('已添加 ✅'); refresh();
+  };
+}
+function refresh(){ renderCountdown(); renderBirthdays(); renderStats(); renderLatest(); renderHero(); }
+
+document.getElementById('manageEvents').onclick = e => { e.preventDefault(); openManage('events'); };
+document.getElementById('manageBirthdays').onclick = e => { e.preventDefault(); openManage('birthdays'); };
+document.querySelector('.hero-dragon').addEventListener('click', () => { confetti(40); toast('奶龙：欢迎回家！🐲'); });
+
+document.getElementById('year').textContent = new Date().getFullYear();
+renderHero(); renderCountdown(); renderBirthdays(); renderQuote(); renderLatest(); renderStats();
+</script>
+</body>
+</html>

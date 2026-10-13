@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>经验分享帖 · 无穹55小窝 📚</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
+</head>
+<body data-page="experience">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-ico">🏠</span>
+      <span>无穹55<small>我们的小窝</small></span>
+    </div>
+    <button class="nav-toggle" aria-label="菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html" data-nav="index">🏠 首页</a>
+      <a href="photos.html" data-nav="photos">📸 照片墙</a>
+      <a href="messages.html" data-nav="messages">💬 留言板</a>
+      <a href="askbox.html" data-nav="ask">📮 提问箱</a>
+      <a href="daily.html" data-nav="daily">🌿 日常</a>
+      <a href="teams.html" data-nav="teams">🧩 组队</a>
+      <a href="experience.html" data-nav="experience">📚 经验帖</a>
+      <a href="honors.html" data-nav="honors">🏆 荣誉墙</a>
+      <a href="members.html" data-nav="members">👥 同学们</a>
+    </div>
+    <button class="nav-gear" id="navGear" title="个性化">⚙️</button>
+    <button class="nav-me" id="navMe"></button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
+      <h1>📚 经验分享帖</h1>
+      <div class="sub">学习、竞赛、选课、科研……你踩过的坑、摸出的路，都能捞别人一把。</div>
+    </div>
+    <button class="btn" id="newPost">✍️ 写一篇</button>
+  </div>
+
+  <div class="filters" id="tagFilter"></div>
+  <div id="postList"></div>
+</div>
+
+<footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
+
+<script src="js/common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+/* ---------- 经验帖逻辑 ---------- */
+const TAGS = ['全部', '学习', '竞赛', '选课', '科研', '生活'];
+const TAG_CLS = { '学习':'t1', '竞赛':'t2', '选课':'t3', '科研':'t5', '生活':'t4' };
+let curTag = '全部', expanded = {};
+
+function renderFilter(){
+  const posts = WQ.get('xposts', []);
+  document.getElementById('tagFilter').innerHTML = TAGS.map(t => {
+    const n = t === '全部' ? posts.length : posts.filter(p => p.tag === t).length;
+    return `<span class="chip ${t===curTag?'on':''}" data-t="${t}">${t} ${n}</span>`;
+  }).join('');
+  document.querySelectorAll('#tagFilter .chip').forEach(c =>
+    c.onclick = () => { curTag = c.dataset.t; renderFilter(); renderList(); });
+}
+
+function renderList(){
+  let posts = WQ.get('xposts', []).slice().sort((a,b) => b.ts - a.ts);
+  if (curTag !== '全部') posts = posts.filter(p => p.tag === curTag);
+  const box = document.getElementById('postList');
+  if (!posts.length){ box.innerHTML = `<div class="card empty"><span class="e-ico">📝</span>这个分类还没有帖子，来写第一篇！</div>`; return; }
+  const me = getMe();
+  box.innerHTML = posts.map(p => {
+    const usefuld = me && (p.useful||[]).includes(me.name);
+    const open = !!expanded[p.id];
+    return `
+    <div class="card xp-card">
+      <div class="xp-head" data-open="${p.id}" style="cursor:pointer">
+        <span class="tag ${TAG_CLS[p.tag]||'t2'}">${WQ.esc(p.tag)}</span>
+        <h3>${WQ.esc(p.title)}</h3>
+        <button class="act" data-del="${p.id}" title="删除">🗑️</button>
+      </div>
+      <div class="xp-summary" data-open="${p.id}" style="cursor:pointer">📋 ${WQ.esc(p.summary)}</div>
+      ${open ? `<div class="xp-body">${WQ.esc(p.body)}</div>` : ''}
+      <div class="xp-meta">
+        <span>${WQ.avatarOf(p.by)} ${WQ.esc(p.by)}</span>
+        <span>· ${WQ.fmt(p.ts)}</span>
+        <span style="margin-left:auto"></span>
+        <button class="act" data-open2="${p.id}">${open ? '🔼 收起' : '🔽 阅读全文'}</button>
+        <button class="act ${usefuld?'liked':''}" data-useful="${p.id}">${usefuld?'🌟':'⭐'} 有用 ${(p.useful||[]).length || ''}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const tog = id => { expanded[id] = !expanded[id]; renderList(); };
+  box.querySelectorAll('[data-open]').forEach(el => el.onclick = e => {
+    if (e.target.closest('[data-del]')) return; tog(el.dataset.open); });
+  box.querySelectorAll('[data-open2]').forEach(b => b.onclick = () => tog(b.dataset.open2));
+  box.querySelectorAll('[data-useful]').forEach(b => b.onclick = () => {
+    const me = ensureMe(); if (!me) return;
+    const posts = WQ.get('xposts', []);
+    const p = posts.find(x => x.id === b.dataset.useful);
+    p.useful = p.useful || [];
+    const i = p.useful.indexOf(me.name);
+    i >= 0 ? p.useful.splice(i, 1) : p.useful.push(me.name);
+    WQ.set('xposts', posts); renderList();
+  });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('删掉这篇帖子？')) return;
+    WQ.set('xposts', WQ.get('xposts', []).filter(x => x.id !== b.dataset.del));
+    renderFilter(); renderList(); toast('已删除 🗑️');
+  });
+}
+
+/* 写新帖 */
+document.getElementById('newPost').onclick = () => {
+  const me = ensureMe(); if (!me) return;
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask show';
+  mask.innerHTML = `
+  <div class="modal" style="width:min(620px,94vw)">
+    <h3>✍️ 写一篇经验帖</h3>
+    <div class="field"><label>标题</label>
+      <input class="input" id="npTitle" maxlength="40" placeholder="如：大一数学建模入门：从校赛到国赛"></div>
+    <div class="field"><label>分类</label>
+      <select class="select" id="npTag" style="width:160px">
+        <option>学习</option><option>竞赛</option><option>选课</option><option>科研</option><option>生活</option>
+      </select></div>
+    <div class="field"><label>一句话摘要</label>
+      <input class="input" id="npSum" maxlength="60" placeholder="用一句话让人想点开（会显示在列表上）"></div>
+    <div class="field"><label>正文</label>
+      <textarea class="textarea" id="npBody" style="min-height:220px" placeholder="正文随便写，分段清楚一点就好。&#10;比如：一、…… 二、…… 【Tips】……"></textarea></div>
+    <div class="m-actions">
+      <button class="btn ghost" id="npCancel">取消</button>
+      <button class="btn">发布 📮</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#npCancel').onclick = () => mask.remove();
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  mask.querySelector('.m-actions .btn').onclick = () => {
+    const title = mask.querySelector('#npTitle').value.trim();
+    const summary = mask.querySelector('#npSum').value.trim();
+    const body = mask.querySelector('#npBody').value.trim();
+    if (!title || !body) { toast('标题和正文要写哦'); return; }
+    const posts = WQ.get('xposts', []);
+    posts.push({ id: WQ.uid(), title, tag: mask.querySelector('#npTag').value,
+      summary: summary || body.slice(0, 50) + '…', body, by: me.name, ts: Date.now(), useful: [] });
+    WQ.set('xposts', posts);
+    mask.remove(); curTag = '全部'; renderFilter(); renderList();
+    emojiBurst(['📚', '🌟', '🙏']);
+    toast('发布成功，谢谢分享！🙏');
+  };
+};
+
+renderFilter(); renderList();
+</script>
+</body>
+</html>
