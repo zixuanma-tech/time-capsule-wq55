@@ -71,6 +71,7 @@
 <footer class="footer"><b>无穹55 · 小窝</b> — 由全班一起搭建 🏠</footer>
 
 <script src="js/common.js"></script>
+<script src="js/api.js"></script>
 <script src="js/seed.js"></script>
 <script>
 /* ---------- 照片墙逻辑 ---------- */
@@ -164,6 +165,7 @@ document.getElementById('phUpload').onclick = () => {
 };
 
 renderAvatar(); renderFilters(); renderGrid();
+window.__wqRerender = () => { renderFilters(); renderGrid(); };
 </script>
 </body>
 </html>

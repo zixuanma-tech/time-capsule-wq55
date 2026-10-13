@@ -14,12 +14,21 @@ const WQ = {
   },
   set(key, val) {
     try {
+      // 同步层钩子（js/api.js）：可对数据盖时间戳并推送服务器；无同步层时无感
+      if (typeof this.onWrite === 'function') {
+        try { const r = this.onWrite(key, val); if (r !== undefined && r !== null) val = r; } catch (e) {}
+      }
       localStorage.setItem(this.prefix + key, JSON.stringify(val));
       return true;
     } catch (e) {
-      toast('💾 存储空间满啦，删掉一些旧照片试试～', 'warn');
+      toast('💾 存储空间满了，试试清理一些旧照片～', 'warn');
       return false;
     }
+  },
+  /* 静默写入：同步层拉取合并落盘用，不再触发 onWrite（避免回环推送） */
+  setQuiet(key, val) {
+    try { localStorage.setItem(this.prefix + key, JSON.stringify(val)); return true; }
+    catch (e) { return false; }
   },
 
   /* 只在首次写入种子数据（用 v2 前缀：功能更新后新板块也能补种子，但绝不覆盖用户数据） */

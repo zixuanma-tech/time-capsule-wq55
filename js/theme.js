@@ -210,6 +210,19 @@
         <label class="switch"><input type="checkbox" id="setGlass" ${t.glass ? 'checked' : ''}><span class="track"></span>毛玻璃效果（配合透明度食用更佳）</label>
       </div>
 
+      <div class="set-row"><b>🔗 数据互通（后端服务器，班委配置）</b>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input class="input" id="setServerUrl" placeholder="如 http://127.0.0.1:8090（留空=纯本地模式）" value="${(window.WQSync && WQSync.getServer()) || ''}" style="flex:1;min-width:200px">
+          <button class="btn sm ghost" id="setServerSave">保存并连接</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn sm teal" id="setServerUpload">⬆️ 全量上传本机数据</button>
+          <button class="btn sm ghost" id="setServerPull">⬇️ 立即同步</button>
+          <span class="small muted" id="setServerStat" style="align-self:center"></span>
+        </div>
+        <div class="small muted" style="margin-top:6px">填上班级服务器的 PocketBase 地址，全班看到的就是同一份数据（动态/照片/提问箱…）；不填则和现在一样各玩各的。本地开发填 http://127.0.0.1:8090</div>
+      </div>
+
       <div class="m-actions" style="justify-content:space-between">
         <button class="btn ghost sm" id="setReset">恢复默认</button>
         <button class="btn" id="setDone">完成 ✨</button>
@@ -285,6 +298,38 @@
     mask.querySelector('#setReset').onclick = () => {
       localStorage.removeItem(KEY);
       mask.remove(); apply(); toastSafe('已恢复默认装扮');
+    };
+
+    /* 数据互通服务器 */
+    const syncStat = mask.querySelector('#setServerStat');
+    mask.querySelector('#setServerSave').onclick = async () => {
+      if (!window.WQSync) { toastSafe('同步组件未加载'); return; }
+      const u = WQSync.setServer(mask.querySelector('#setServerUrl').value);
+      if (!u) { toastSafe('已切回纯本地模式'); return; }
+      syncStat.textContent = '连接中…';
+      try {
+        const changed = await WQSync.pull();
+        syncStat.textContent = '✅ 已连接，更新 ' + changed.length + ' 个板块';
+        toastSafe('数据互通已开启 🎉');
+      } catch (e) { syncStat.textContent = '⚠️ 连不上服务器'; }
+    };
+    mask.querySelector('#setServerUpload').onclick = async () => {
+      if (!window.WQSync || !WQSync.getServer()) { toastSafe('先填服务器地址并保存'); return; }
+      syncStat.textContent = '上传中…';
+      try {
+        const n = await WQSync.uploadAll();
+        syncStat.textContent = '✅ 已排队上传 ' + n + ' 条记录';
+        toastSafe('本机数据已上传到服务器 ⬆️');
+      } catch (e) { syncStat.textContent = '⚠️ 上传失败'; }
+    };
+    mask.querySelector('#setServerPull').onclick = async () => {
+      if (!window.WQSync || !WQSync.getServer()) { toastSafe('先填服务器地址并保存'); return; }
+      syncStat.textContent = '同步中…';
+      try {
+        const changed = await WQSync.pull();
+        syncStat.textContent = '✅ 更新了 ' + changed.length + ' 个板块';
+        toastSafe('同步完成 ⬇️');
+      } catch (e) { syncStat.textContent = '⚠️ 同步失败'; }
     };
   }
 

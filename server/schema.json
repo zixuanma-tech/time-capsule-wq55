@@ -1,0 +1,17 @@
+{
+  "name": "wq_records",
+  "type": "base",
+  "listRule": "",
+  "viewRule": "",
+  "createRule": "",
+  "updateRule": "",
+  "deleteRule": "",
+  "fields": [
+    { "name": "bucket", "type": "text", "required": true, "options": { "max": 32 } },
+    { "name": "rid", "type": "text", "required": true, "options": { "max": 64 } },
+    { "name": "data", "type": "json", "options": { "maxSize": 8000000 } }
+  ],
+  "indexes": [
+    "CREATE UNIQUE INDEX idx_wq_bucket_rid ON wq_records (`bucket`, `rid`)"
+  ]
+}

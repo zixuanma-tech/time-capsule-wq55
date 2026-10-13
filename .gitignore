@@ -1,6 +1,11 @@
 # 问卷原始数据（含全班信息，不上公开仓库）
 *.pdf
 
+# 后端二进制与数据（server/schema.json 保留）
+server/pocketbase.exe
+server/pb.zip
+server/pb_data/
+
 # 系统杂物
 .DS_Store
 Thumbs.db
