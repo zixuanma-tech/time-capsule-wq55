@@ -18,7 +18,6 @@
     ['pink',   '#F27B9D', '🌸 樱花粉'],
     ['violet', '#8B7CF0', '💜 葡萄紫'],
     ['mint',   '#2EB67D', '🌿 薄荷绿'],
-    ['geek',   '#00E676', '🟢 极客黑客（终端绿+等宽字体）'],
   ];
   const MODES = [
     ['auto',  '✨ 跟随壁纸'],
@@ -30,7 +29,6 @@
     g2: ['薄暮晚霞', 'linear-gradient(135deg,#C3B6F7 0%,#FBC2EB 55%,#FFDDE1 100%)', 'light'],
     g3: ['抹茶奶昔', 'linear-gradient(135deg,#C8E6C9 0%,#F5EEDC 100%)', 'light'],
     g4: ['深空夜幕', 'linear-gradient(160deg,#2B3A67 0%,#1F2C4D 100%)', 'dark'],
-    mx: ['矩阵代码雨', '', 'dark'],
   };
 
   function load() {
@@ -116,47 +114,6 @@
     } else if (layer) layer.remove();
   }
 
-  /* ---------- 矩阵雨画布（壁纸"矩阵代码雨"，零依赖 canvas 实现） ---------- */
-  let matrixRAF = null, matrixCv = null;
-  function startMatrix() {
-    if (matrixRAF) return;
-    matrixCv = document.createElement('canvas');
-    matrixCv.id = 'matrix-layer';
-    matrixCv.className = 'matrix-layer';
-    document.body.prepend(matrixCv);
-    const ctx = matrixCv.getContext('2d');
-    const fs = 16;
-    const chars = 'アカサタナハマヤラワエオ01<>/{}[]$#*+=;:.'.split('');
-    let drops = [];
-    const fit = () => {
-      matrixCv.width = innerWidth; matrixCv.height = innerHeight;
-      drops = Array(Math.ceil(innerWidth / fs)).fill(0).map(() => Math.random() * -60);
-    };
-    fit();
-    let last = 0;
-    const draw = t => {
-      matrixRAF = requestAnimationFrame(draw);
-      if (t - last < 50) return;                 // ~20fps：效果够、耗电低
-      last = t;
-      ctx.fillStyle = 'rgba(7,11,12,.14)';
-      ctx.fillRect(0, 0, matrixCv.width, matrixCv.height);
-      ctx.font = fs + 'px monospace';
-      drops.forEach((y, i) => {
-        ctx.fillStyle = Math.random() < .07 ? '#C8FFE3' : 'rgba(0,230,118,.8)';
-        ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i * fs, y * fs);
-        drops[i] = (y * fs > matrixCv.height && Math.random() > .975) ? 0 : y + 1;
-      });
-    };
-    matrixRAF = requestAnimationFrame(draw);
-    window.addEventListener('resize', fit);
-    matrixCv._fit = fit;
-  }
-  function stopMatrix() {
-    if (matrixRAF) cancelAnimationFrame(matrixRAF);
-    matrixRAF = null;
-    if (matrixCv) { matrixCv._fit && window.removeEventListener('resize', matrixCv._fit); matrixCv.remove(); matrixCv = null; }
-  }
-
   function apply() {
     const t = load();
     document.documentElement.dataset.accent = t.accent;
@@ -165,26 +122,12 @@
     if (document.body) {
       if (!wall) { wall = document.createElement('div'); wall.id = 'wall-layer'; wall.className = 'wall-layer'; document.body.prepend(wall); }
       if (!dim) { dim = document.createElement('div'); dim.id = 'dim-layer'; dim.className = 'dim-layer'; document.body.prepend(dim); }
-      if (t.wall === 'mx') {
-        wall.style.display = 'none';
-        if (!document.hidden) startMatrix();
-      } else {
-        stopMatrix();
-        if (t.wall === 'none') { wall.style.display = 'none'; }
-        else {
-          wall.style.display = 'block';
-          const img = t.wall === 'custom' ? t.wallImg : (WALLS[t.wall] ? WALLS[t.wall][1] : '');
-          wall.style.background = img + ' center/cover no-repeat fixed';
-        }
+      if (t.wall === 'none') { wall.style.display = 'none'; }
+      else {
+        wall.style.display = 'block';
+        const img = t.wall === 'custom' ? t.wallImg : (WALLS[t.wall] ? WALLS[t.wall][1] : '');
+        wall.style.background = img + ' center/cover no-repeat fixed';
       }
-      // 扫描线：极客主题点睛
-      let scan = document.getElementById('scan-layer');
-      if (t.accent === 'geek') {
-        if (!scan) { scan = document.createElement('div'); scan.id = 'scan-layer'; scan.className = 'scan-layer'; document.body.prepend(scan); }
-      } else if (scan) scan.remove();
-      // logo 变终端提示符
-      const ico = document.querySelector('.logo-ico');
-      if (ico) ico.textContent = t.accent === 'geek' ? '>_' : '🏠';
     }
     const r = document.documentElement.style;
     r.setProperty('--card-alpha', t.alpha);
@@ -194,15 +137,13 @@
     /* 明暗判定 */
     const setMode = dark => { document.documentElement.dataset.mode = dark ? 'dark' : 'light'; };
     let p;
-    if (t.accent === 'geek') p = Promise.resolve(true);          // 极客风自带深色
-    else if (t.mode === 'dark') p = Promise.resolve(true);
+    if (t.mode === 'dark') p = Promise.resolve(true);
     else if (t.mode === 'light') p = Promise.resolve(false);
     else if (t.wall === 'none') p = Promise.resolve(false);
-    else if (t.wall === 'mx') p = Promise.resolve(true);
     else if (t.wall === 'custom') p = wallpaperIsDark(t.wallImg).then(d => d === true);
     else p = Promise.resolve(WALLS[t.wall][2] === 'dark');
     // 先按已知信息立即设置，异步检测结果回来后再修正（避免闪烁）
-    setMode(t.accent === 'geek' || t.mode === 'dark' || (t.mode === 'auto' && (t.wall === 'g4' || t.wall === 'mx')));
+    setMode(t.mode === 'dark' || (t.mode === 'auto' && t.wall === 'g4'));
     p.then(dark => { setMode(dark); decorateHero(load()); });
     decorateHero(t);
   }
@@ -244,7 +185,7 @@
 
       <div class="set-row"><b>壁纸</b><div id="setWalls" style="display:flex;gap:8px;flex-wrap:wrap">
         <span class="wall-opt ${t.wall === 'none' ? 'on' : ''}" data-w="none" style="background:var(--bg-2);color:var(--ink-2);text-shadow:none">默认奶油</span>
-        ${Object.entries(WALLS).map(([k, v]) => `<span class="wall-opt ${t.wall === k ? 'on' : ''}" data-w="${k}" style="background:${v[1] || '#0B3A26'}">${v[0]}</span>`).join('')}
+        ${Object.entries(WALLS).map(([k, v]) => `<span class="wall-opt ${t.wall === k ? 'on' : ''}" data-w="${k}" style="background:${v[1]}">${v[0]}</span>`).join('')}
         <span class="wall-opt ${t.wall === 'custom' ? 'on' : ''}" data-w="custom" style="background:var(--primary-soft);color:var(--primary-2);text-shadow:none">🖼️ 自定义</span>
       </div>
       <div id="setCustomBox" style="display:${t.wall === 'custom' ? 'block' : 'none'};margin-top:10px">
@@ -398,10 +339,6 @@
     apply();
     document.addEventListener('click', e => {
       if (e.target.closest('#navGear')) openSettings();
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stopMatrix();
-      else if (load().wall === 'mx') startMatrix();
     });
   });
 })();
