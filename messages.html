@@ -94,7 +94,7 @@ document.getElementById('msgSend').onclick = () => {
   toast(anon ? '匿名气泡飘出去了 🕵️' : '气泡发射成功！🫧');
 };
 
-/* ---- 流动气泡引擎：缓缓上浮 + 蛇形漂移 + 穿边循环 ---- */
+/* ---- 流动气泡引擎：4 条车道恒速平移（相邻反向）+ 轻微浮动 + 穿边循环 ---- */
 let bubAnim = null;   // rAF 句柄
 let bubData = [];     // 每个气泡的运动状态
 
@@ -105,18 +105,16 @@ function startBubLoop(){
   let last = performance.now();
   const step = t => {
     const dt = Math.min(60, t - last) / 1000; last = t;
-    const W = pool.clientWidth, H = pool.clientHeight;
+    const W = pool.clientWidth;
     for (const b of bubData) {
       const slow = b.hover ? .25 : 1;                    // 悬停时减速，方便点开阅读
-      b.phase += b.swaySpeed * dt * slow;
-      b.x += (b.vx + Math.cos(b.phase) * b.sway) * dt * slow;
-      b.y += b.vy * dt * slow;
-      b.rot += b.vr * dt * slow;
-      if (b.rot > 6 || b.rot < -6) b.vr *= -1;
+      b.bobPhase += 1.4 * dt * slow;
+      b.x += b.vx * dt * slow;                           // 车道恒速平移
+      b.y = b.laneY + Math.sin(b.bobPhase) * 3;          // 上下仅轻微浮动
       b.scale += ((b.hover ? 1.09 : 1) - b.scale) * .12;
-      const w = b.el.offsetWidth, h = b.el.offsetHeight;
-      if (b.x < -w - 30) b.x = W + 20; else if (b.x > W + 30) b.x = -w - 20;
-      if (b.y < -h - 30) b.y = H + 20; else if (b.y > H + 40) b.y = -h - 20;
+      const w = b.el.offsetWidth;
+      if (b.vx > 0 && b.x > W + 30) b.x = -w - 20;       // 穿边循环
+      else if (b.vx < 0 && b.x < -w - 30) b.x = W + 20;
       b.el.style.transform = `translate(${b.x.toFixed(1)}px,${b.y.toFixed(1)}px) rotate(${b.rot.toFixed(2)}deg) scale(${b.scale.toFixed(3)})`;
     }
     bubAnim = requestAnimationFrame(step);
@@ -146,11 +144,10 @@ function renderBubbles(){
   pool.innerHTML = '';
   bubData = [];
   const W = pool.clientWidth || 1000, H = pool.clientHeight || 420;
-  // 初始用网格槽位散开（避免刚加载就叠在一起），随后自由流动
-  const cols = Math.max(3, Math.floor(W / 240)), rows = 3;
-  const slots = [];
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) slots.push([r, c]);
-  slots.sort(() => Math.random() - .5);
+  // 车道模型：池子分 4 条水平车道，每条恒速流动、相邻方向相反 —— 规律且持续
+  const LANES = 4;
+  const lanePos = new Array(LANES).fill(0);          // 每条车道已放置的气泡数（用于均布）
+  const laneTotal = Math.max(1, Math.ceil(msgs.length / LANES));
   msgs.forEach((m, i) => {
     const el = document.createElement('div');
     el.className = 'bub';
@@ -159,17 +156,18 @@ function renderBubbles(){
     el.innerHTML = `${WQ.esc(short)}<span class="who">${m.anon ? '🕵️ 匿名' : WQ.esc(m.by)}</span>`;
     el.style.zIndex = 2 + (i % 3);
     pool.appendChild(el);
-    const [sr, sc] = slots[i % slots.length];
+    const lane = i === 0 ? LANES - 1 : i % LANES;                       // 最新一条走最下车道，从左侧驶入
+    const slot = lanePos[lane]++;                                       // 同车道均布，避免初始重叠（同速不会自己分开）
     const b = {
       el, hover: false, scale: 1,
-      x: i === 0 ? W / 2 - 90 : (sc + .1 + Math.random() * .4) / cols * W,   // 最新一条从底部升起
-      y: i === 0 ? H + 14    : (sr + .15 + Math.random() * .4) / rows * H,
-      vx: (15 + Math.random() * 18) * (Math.random() < .5 ? -1 : 1),
-      vy: -(8 + Math.random() * 8),
-      sway: 18 + Math.random() * 20, swaySpeed: .5 + Math.random() * .6,
-      phase: Math.random() * Math.PI * 2,
-      rot: (Math.random() - .5) * 5, vr: (Math.random() - .5) * 1.2,
+      laneY: (lane + .5) / LANES * H - 34 + (Math.random() - .5) * 20,
+      x: i === 0 ? -240 : (slot + Math.random() * .3) / laneTotal * W,
+      y: 0,
+      vx: (24 + lane * 7) * (lane % 2 ? -1 : 1),
+      bobPhase: Math.random() * Math.PI * 2,
+      rot: (Math.random() - .5) * 5,
     };
+    b.y = b.laneY;
     el.addEventListener('mouseenter', () => b.hover = true);
     el.addEventListener('mouseleave', () => b.hover = false);
     el.addEventListener('click', () => openMsgModal(m.id));
